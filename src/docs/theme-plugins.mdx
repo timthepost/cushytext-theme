@@ -1,0 +1,290 @@
+---
+title: Tweaking The SEO And TOC Plugins
+description: Documentation on the Table Of Contents And SEO Plugins
+metas:
+  description: Documentation on the SEO and TOC plugins that come with Cushy Text, An Interactive Theme For Lume 3
+  tags:
+    - Self Publishing
+    - Lume Theme
+    - Lume 3 
+  image: /docs/theme-plugins/index.png
+menu:
+  visible: true
+  order: 6
+---
+
+# {title}
+
+I needed a lightweight TOC plugin to work independently of the 
+Markdown plugin being used, so I ended up writing one myself 
+which does a pretty good job if you prefer a simple, flat 
+TOC like I do.
+
+If you don't, and prefer a more indented one, I'll happily take
+a PR.
+
+I also ended up writing a SEO plugin that catches a huge number of 
+common mistakes before they mess up your site's SEO standing. I don't
+make promises on results, only that you'll get in the way of them 
+less through common mistakes.
+
+<h2 id="toc-plugin" class="margin-top--md margin-bottom--md">TOC Options & configuration</h2>
+
+***The theme will not function properly with this plugin removed.*** Unless, of course, 
+you install another Markdown plugin to handle it. There are the configurable options to 
+control generation:
+
+| Function | Name | Type | Description | Default Value | Configured Value |
+|:-:|:-:|:-:|:-:|:-:|:-:|
+| TOC | `toc_selector` | string | ID of the container where the generated TOC will land. | `#toc` | `#toc` |
+| TOC | `toc_container` | string | Class name of the container to scan for headings. | `.toc-enabled` | `.toc-enabled` |
+| TOC | `toc_heading_selectors` | string | Comma-separated list of headings to process. | `h2, h3, h4, h5, h6` | `h2, h3, h4, h5, h6` |
+| TOC | `toc_list_class` | string | Class name to apply to the generated TOC list. | empty | `table-of-contents padding-top--none` |
+| TOC | `toc_link_class` | string | Class name to apply to generated TOC links. | empty | `table-of-contents__link` |
+
+
+<h2 id="simple-seo" class="margin-top--lg"> SEO Static Analysis Plugin (AKA Simple SEO)</h2>
+
+The SEO plugin tries to catch semantic mistakes that are 
+common when creating with Markdown-driven static templates,
+like sites generated with Lume. In a nutshell it catches issues 
+like:
+
+ - Length of titles, descriptions, overall content length,
+   presence of important meta elements
+
+ - Semantic checks, like making sure headings in rendered
+   pages appear in proper order (h1 - h6)
+
+ - HTML element checks like image alt text checks, image 
+   title checks, which also helps accessibility 
+
+ - Common word percentage calculation tags that can make 
+   a big difference in indexing, like titles and descriptions
+
+The plugin works by extracting as much information as it can from 
+the `Document` object Lume provides for every rendered page. Where 
+information can't be obtained directly from the document, frontmatter
+is used. 
+
+The plugin offers configurability through many options that 
+you can pass when loading, as well as per-page overrides you
+can use in `_data.yml` files or frontmatter.
+
+<h2 id="simple-seo-internationalization" class="margin-top--md"> Internationalization Features Of The SEO Plugin</h2>
+
+There are several key places where anyone running a multi-language
+site might want to take notice, as I've tried my best to keep the 
+plugin as flexible and configurable as possible:
+
+ - The common word list : which allows you to use a different 
+   set of words than the default English set for calculating
+   common word percentages.
+
+ - The common word percentage callback option : which lets you
+   provide your own calculation function yourself (the plugin
+   will provide a string, you return a percentage from 0.00 to 1.00).
+
+ - The default locale option : The plugin uses the `Intl.Segmenter()` API
+   and passes the page locale along with the text to it, but you supply 
+   a default in case once isn't set. This lets you run the plugin once 
+   per language supported safely.
+
+ - The length unit option :  This lets you tell the plugin that you 
+   want to represent lengths in words, graphemes or even sentences
+   instead of the default characters.
+
+ - The option to ignore pages in all locales BUT the one you specify, 
+   which makes it convenient to treat pages in different languages 
+   with different settings, generating different reports, etc.
+
+<h2 id="simple-seo-plugin-use" class="margin-top--md">Example Multi-Language Setup:</h2>
+
+Here's a complex configuration where the plugin is invoked twice, once per 
+language, with different options for each:
+
+```js
+// below the last plugin import ...
+import { japaneseCommonWords } from "cushytext-theme/_plugins/seo/japanese_common_words.js";
+
+  // later on, after most other plugins run
+
+  .use(
+    seo({
+      output: "./_seo_report.json",
+      ignore: ["/404.html"],
+      lengthUnit: "character",
+      lengthLocale: "en",
+      ignoreAllButLocale: "en",
+      logOperations: false
+    }),
+  )
+  .use(
+    seo({
+      output: "./_seo_report_ja.json",
+      ignore: ["/404.html"],
+      lengthUnit: "word",
+      lengthLocale: "ja",
+      userCommonWordSet: japaneseCommonWords,
+      ignoreAllButLocale: "ja",
+      logOperations: false
+    }),
+  )
+```
+
+<h2 id="simple-seo-plugin-use" class="margin-top--md">Example Single-Language Setup:</h2>
+
+Let's say you just needed a different custom words dictionary:
+
+```js
+  const esCommonWords = new Set<string>;
+
+  // ... fill out esCommonWords similar to the ones in the plugin ....
+
+  .use(
+    seo({
+      output: "./_seo_report_en.json",
+      ignore: ["/admin/", "/dev/", "/404.html"],
+      lengthUnit: "character",
+      lengthLocale: "es",
+      ignoreAllButLocale: "es",
+      userCommonWordSet: esCommonWords
+    }),
+  )
+```
+
+English users really only need to worry about the thresholds and which checks to run.
+
+<h2 id="simple-seo-plugin-generators" class="margin-top--md">Dealing With Generator Functions:</h2>
+
+Sometimes, we use generator functions to generate a lot of files, and we may want to 
+squelch things like content length warnings. To do this, place a `_data.yml` file in
+the same directory as your generator function, and set the frontmatter options there.
+
+For instance, tag pages on this site are generated by generators that live in `/generators`,
+isolated specifically so I can easily control their frontmatter, e.g.:
+
+`src/generators/_data.yml`:
+
+```yml
+seo:
+  skip_content: true
+```
+
+Theme defaults are very conservative; everyone will want to configure thresholds depending
+on their needs. That's why everything (practically) is configurable.
+
+<h2 id="rest-endpoint" class="margin-top--md">Adding a RESTful Report Endpoint To Middleware:</h2>
+
+The following code will set up a route that will (if in local mode with `LUME_DRAFTS` set), also 
+set up the API to proxy the SEO report results. This can be useful for pulling in issues in your
+browser using `fetch()`.
+
+You can also allow the public to access them if your community is one that likes to take on 
+janitorial tasks.
+
+```js
+const DEV_MODE = Deno.env.get("LUME_DRAFTS") || false;
+
+router.get("/api/seo-report", ({ _request }) => {
+  if (! DEV_MODE) {
+    return new Response(JSON.stringify({ error: "Not in dev mode" }), { 
+      status: 500,
+    });
+  }
+  const path = "./_seo_report.json";
+  try {
+    const data = Deno.readTextFileSync(path);
+    return new Response(data, { status: 200 });
+  } catch (error) {
+    // it's not there
+    if (error instanceof Deno.errors.NotFound) {
+      return new Response(JSON.stringify({ error: "File not found" }), {
+        status: 404,
+      });
+    }
+    // umm, neither is the backing storage LOL. Read denied!
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+    });
+  }
+});
+```
+
+If there's no report, the status will be set to 404. If something else happens
+(like GH storage timing out), it will return a status of 500. You can do something
+similar with other reports, if you're building an admin dashboard.
+
+<h2 id="seo-plugin-initial-config" class="margin-top--md">Setting The Initial Defaults</h2>
+
+The initial defaults are conservative and basically "best practices based" 
+on English content recommendations when it comes to Title and Meta Description
+lengths. 
+
+Content length, and common word percentage, however, are really more dependent on 
+your topic and content style. What I recommend you do is set the values low enough
+so that all of your pages trip the checks, look at the reported values of your 
+best-performing pages, adjust the bar so that it no longer trips on them, and 
+then you have some initial goals and tests to run.
+
+SEO is a black box. If you provide accessible pages with clear, useful content 
+organized in logical, descriptive headings, you'll do as well as you can with 
+your content alone. Back links, content age and lots of other things affect 
+how you rank and even what gets indexed.
+
+You want the settings to push you to give yourself the best shot that you can, 
+without being so annoying that you just constantly ignore them or shut them up
+with frontmatter. If it gets to that, what's the point of the plugin?
+
+Reach out to me on the Cushy Text Discord or via email if you need help with this
+part, or have suggestions to share for better defaults, etc.
+
+<h2 id="seo-plugin-roadmap" class="margin-top--md">Simple SEO New Feature Roadmap:</h2>
+
+More checks, of course, as they make sense. Additionally, some kind of caching
+should be implemented so the plugin is only iterating through each document a 
+dozen times if they're new, or have changed since the last time.
+
+I'm pretty sure I can just hash `page.document`? Looking into it. If you have
+a hundred pages in three languages, this plugin could add considerable length 
+to builds, so I'd like to minimize that.
+
+Plus, this thing already has ***twenty-one frigging options*** 😱 so why not make it
+fifty? 😂
+
+
+<comp.alert type="warning" 
+  message="***Unreleased Code Warning: This list isn't fully-settled yet.***<br />I don't foresee any breaking changes, but still settling on everything and testing defaults." />
+
+<h2 id="simple-seo-plugin-options" class="margin-top--md">All Simple SEO Plugin Options & Code Defaults:</h2>
+
+| Option                             | Description                                                                                                   | Default Value          |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `warnTitleLength`                  | Warn if the page title exceeds the recommended length.                                                        | `true`                 |
+| `warnUrlLength`                    | Warn if the page URL is too long.                                                                             | `true`                 |
+| `warnContentLength`                | Warn if the page content is too short or too long.                                                            | `true`                 |
+| `warnMetasDescriptionLength`       | Warn if the meta description exceeds the recommended length.                                                  | `true`                 |
+| `warnMetasDescriptionCommonWords`  | Warn if the meta description contains a high percentage of common words.                                      | `true`                 |
+| `warnDuplicateHeadings`            | Warn if there is more than one `<h1>` tag on a page.                                                          | `true`                 |
+| `warnHeadingOrder`                 | Warn if heading elements (h1, h2, etc.) are used out of order.                                                | `true`                 |
+| `warnUrlCommonWords`               | Warn if the URL contains a high percentage of common words.                                                   | `true`                 |
+| `warnTitleCommonWords`             | Warn if the page title contains a high percentage of common words.                                            | `true`                 |
+| `thresholdMetaDescriptionLength`   | The maximum recommended length for meta descriptions (in the unit specified by `lengthUnit`).                  | `150`                  |
+| `thresholdContentMinimum`          | The minimum recommended length for page content (in the unit specified by `lengthUnit`).                       | `4000`                 |
+| `thresholdContentMaximum`          | The maximum recommended length for page content (in the unit specified by `lengthUnit`).                       | `20000`                |
+| `thresholdLength`                  | The maximum recommended length for titles (in the unit specified by `lengthUnit`).                             | `80`                   |
+| `thresholdLengthPercentage`        | The percentage of `thresholdLength` to use as the maximum length for URLs.                                     | `0.7`                  |
+| `thresholdCommonWordsPercent`      | The maximum percentage of common words allowed in titles and URLs.                                             | `45`                   |
+| `thresholdLengthForCWCheck`        | The minimum length (in the unit specified by `lengthUnit`) for common word percentage checks to be performed. | `35`                   |
+| `userCommonWordSet`                | A custom set of common words to use instead of the default list.                                               | `undefined` (default set used) |
+| `warnImageAltAttribute`            | Warn if an image is missing the `alt` attribute.                                                              | `true`                 |
+| `warnImageTitleAttribute`          | Warn if an image is missing the `title` attribute.                                                            | `true`                 |
+| `extensions`                       | The file extensions to process.                                                                               | `[".html"]`            |
+| `ignore`                           | An array of URLs to ignore during processing.                                                                  | `["/404.html"]`       |
+| `output`                           | The output destination for the SEO report (file path, function, or `null` for console).                       | `null`                 |
+| `removeReportFile`                 | Whether to remove the report file if no warnings are found.                                                    | `true`                 |
+| `lengthUnit`                       | The unit to use for length checks (`character`, `grapheme`, `word`, `sentence`).                               | `"character"`          |
+| `lengthLocale`                     | The default locale to use for length checks if not determined by the page.                                    | `"en"`                 |
+| `commonWordPercentageCallback`     | A custom callback function to calculate the common word percentage.                                            | `null`                 |
+| `ignoreAllButLocale`               | Ignore any post not in this locale (useful for daisy chaining)                                                 | `null`                 |
+| `logOperations`                    | If activity (blow by blow decision making) should be logged while running. Has nothing to do with the report.  | `false` |

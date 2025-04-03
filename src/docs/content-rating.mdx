@@ -1,0 +1,154 @@
+---
+title: The Content Rating Component
+description: Which components are interactive, and how do they work?
+metas:
+  image: /docs/archetypes/index.png
+  description: A guide to the interactive content rating and associated admin plugin included with Cushy Text.
+  tags:
+    - Content Rating System
+    - Self Publishing
+    - Lume Theme
+    - Lume 3 
+menu:
+  visible: true
+  order: 9
+---
+
+# {title}
+
+The content rating component is powered by [Lume 3 Router Middleware](/docs/middleware/) 
+and consists of two components:
+
+ 1. The front-end form & survey component: `comp.feedback()`, and, 
+ 
+ 2. The (kinda) back-end admin component: `comp.feedbackAdmin()`. 
+
+The first one produces the form that gathers the vote and optional 
+feedback. It then saves the input to DenoKV (and / or Discord, soon,
+along with other options).
+
+The second adds a table that lets you manage the feedback (currently, 
+delete).
+
+## Anonymous Content Feedback Survey Component
+
+On the right-sidebar of every document page, you'll see a little widget
+that lets you express how you feel about reading the current article. That 
+widget uses the Router middleware to process the form submission and inserts 
+the feedback into a DenoKV database or anything else that can take input from 
+a call to `fetch()`. I plan to have it also work with posting (via Bot) to 
+Discord. The survey is visible in the right sidebar on every page in `/docs`;
+here it is expanded:
+
+<img 
+  src="/uploads/content/feedback-input.png" 
+  alt="feedback input form" 
+  title="Expanded view of the feedback form" 
+  style="border-radius: 1em"
+  />
+
+Feedback submits to `yourdomain.com/api/feedback` via POST request and has a 
+built-in honeypot. I'm currently investigating possible integrations
+with privacy-respecting captcha services.
+
+You can use it in a template like this:
+
+```js
+{{ await comp.feedback({ basename: url })}}
+```
+or in a MDX post (blog / docs) like this:
+
+```jsx
+<comp.feedback basename={url} />
+```
+
+The `basename` variable is used literally as _the base name_ of the key
+that gets created to store the feedback entry. It's indexed by type, 
+url. If using the redirects plugin, use the _oldest_ URL of the
+group.
+
+You're welcome to use it for the blog too! But perhaps make a copy of 
+the plugin as `blogFeedback` and add another locale entry, so you can
+have different CTAs, vote buttons, etc. 
+
+## Anonymous Content Feedback Admin Component
+
+The `comp.feedbackAdmin()` plugin lets you put an admin area for the 
+anonymous feedback wherever it's convenient for you to put it. 
+
+Designed to run _locally_ only, it works in conjunction with `/api/feedback` 
+to get a list of feedback and keys, display it, and provide a convenient means
+of deleting it:
+
+<img 
+  src="/uploads/content/feedback-admin.png" 
+  alt="feedback admin table" 
+  title="Bare bones, but sufficient."
+  style="border-radius: 1em;" 
+  />
+
+It puts a container in the document that receives a table from a 
+call to `fetch()` against a route which only works if `LUME_DRAFTS`
+is set.
+
+To use it in a template:
+
+```js
+{{ await comp.feedbackAdmin() }}
+```
+
+Or in MDX:
+
+```jsx
+<comp.feedbackAdmin />
+```
+
+<br />
+## Creating A Local-Only '/admin' Route
+
+If you put the following in any directory, including the `src/` root directory,
+you'll get an "admin" area that only works locally. This can be accomplished by
+taking advantage of the fact that Lume will render drafts locally if `LUME_DRAFTS`
+is set, which is also used by CushyDocs to control dev mode. I named mine `src/cushy-admin.mdx`
+because I find `http://localhost:3000/cushy-admin/` the most convenient since it doesn't
+conflict with the CMS. 
+
+You do you, here's the sparse code you'll need:
+
+```jsx
+---
+title: Local Admin Area
+layout: layouts/page.vto
+draft: true
+menu:
+  display: true
+  order: -1
+---
+
+<h1>{title}</h1>
+
+<comp.feedbackAdmin />
+```
+
+The component will load a script that runs in your browser, which communicates with 
+`/api/feedback` to display and / or delete feedback. You'll find the routes defined
+in [`src/_server_routes.ts`](https://github.com/timthepost/cushytext/blob/main/src/_server_routes.ts)
+(Github Link).
+
+## Deno Deploy Environmental Variables
+
+Place your `DENO_KV_ACCESS_TOKEN` as well as `DENO_KV_URL` (see below) in a file named 
+`.env-local`, then before running the local server, run:
+
+```bash
+> source envloader
+```
+
+There will be notice that the variables were loaded. Or, however you like to do it.
+
+The `DENO_KV_URL` is found in Deno Deploy, in the KV tab, for the string you should
+pass to `Deno.openKv()` if connecting away from Deno Deploy (e.g. console). If it's 
+not set in your environment, Deno will just fall back to local sqlite, and you won't
+see any data. 
+
+That's it! Deno KV is pretty much zero config; that's one of the reasons I chose it.

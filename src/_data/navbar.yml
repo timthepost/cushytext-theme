@@ -1,0 +1,67 @@
+top_nav:
+  - type: "menu"
+    text: Getting Started
+    href: /quickstart/
+    title: You've got this!
+    links:
+      - text: Run Through The Checklist
+        href: /quickstart/
+        title: Almost no configuration is needed.
+
+      - text: View The Components
+        href: /infima-components/
+        title: Neat Things You Can Build Awesome Websites With!
+
+      - text: Read The Docs
+        href: /docs/
+        title: We hold this theme to be ... self .... documenting!
+
+      - text: Read Your Invitation!
+        href: /blog/example-post/
+        title: You are cordially invited to come hang out with us in Discord!
+
+  - type: "link"
+    href: "/docs/"
+    text: Docs
+    title: All The Docs Ship With The Theme.
+
+  - type: "link"
+    href: "/blog/"
+    text: Blog
+    title: We Created One Post, Just For You!
+
+footer:
+  - category: "Theme Basics:"
+    links:
+      - text: Fundamental Archetypes Explained
+        href: /docs/archetypes/
+
+      - text: Working With Components
+        href: /docs/components/
+
+      - text: Lume 3 Router Middleware
+        href: /docs/middleware/
+
+  - category: "Join The Community:"
+    links:
+      - text: Cushy Text Discord Server
+        href: "https://discord.gg/ETx8S8cWwH"
+
+      - text: Lume Discord Server
+        href: "https://discord.gg/YbTmpACHWB"
+
+  - category: "Your Category Here:"
+    links:
+      - text: Your Link Here
+        href: "#"
+
+  - category: "Other Useful Resources:"
+    links:
+      - text: Lume Documentation
+        href: "https://lume.land/docs/overview/about-lume/"
+
+      - text: Lume Theme Gallery
+        href: "https://lume.land/themes/"
+
+      - text: Open Dyslexic Font
+        href: "https://opendyslexic.org/"

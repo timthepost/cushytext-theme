@@ -1,0 +1,14 @@
+layout: layouts/docs.vto
+waypoint: "%theme-docs%"
+type: docs
+menu:
+  visible: true
+  order: 0
+docs:
+  basedir: /docs/
+  title: "Cushy Theme Docs"
+  sidebar: auto
+  guest:
+    heading: "Latest Blog Post:"
+    waypoint: "%blog%"
+    posts: 1

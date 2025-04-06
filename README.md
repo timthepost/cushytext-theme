@@ -25,8 +25,7 @@ more updates!
 ## Using the SEO plugin:
 
 Because a release has now been tagged in, you can use jsdelivr to get
-and update the SEO plugin (it's fine to use the plugin without the  
-theme, they're just shipped together):
+and update the SEO plugin (it's fine to use the plugin without the theme, they're just shipped together):
 
 ```js
 import seo from "https://cdn.jsdelivr.net/gh/timthepost/cushytext-theme@latest/src/_plugins/seo/mod.ts";

@@ -22,7 +22,7 @@ some that could conceivably happen as testing continues.
 Have a look at [the main site blog](https://cushytext.deno.dev/blog/) for
 more updates!
 
-## Using the SEO plugin:
+## Using the "Simple SEO" plugin:
 
 Because a release has now been tagged in, you can use jsdelivr to get
 and update the SEO plugin (it's fine to use the plugin without the theme, they're just shipped together):

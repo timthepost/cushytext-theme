@@ -29,9 +29,11 @@ and update the SEO plugin (it's fine to use the plugin without the theme, they'r
 
 ```js
 import seo from "https://cdn.jsdelivr.net/gh/timthepost/cushytext-theme@latest/src/_plugins/seo/mod.ts";
+```
 
-// ... later on ...
+And a bit later on when all other plugins have loaded:
 
+```js
       .use(
         seo({
           output: "./_seo_report.json",
@@ -42,7 +44,7 @@ import seo from "https://cdn.jsdelivr.net/gh/timthepost/cushytext-theme@latest/s
       )
 ```
 
-[See the docs for many more configuration options](https://cushytext.deno.dev/docs/theme-plugins/#simple-seo).
+[See the full docs for many more configuration options](https://cushytext.deno.dev/docs/theme-plugins/#simple-seo).
 
 Here's an example of using it for English and Japanese, along with the
 common word set contributed by [Rick Cogley](https://github.com/RickCogley):

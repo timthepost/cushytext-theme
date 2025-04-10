@@ -22,7 +22,7 @@ some that could conceivably happen as testing continues.
 Have a look at [the main site blog](https://cushytext.deno.dev/blog/) for
 more updates!
 
-## Using the "Simple SEO" plugin:
+## Just using the "Simple SEO" plugin:
 
 Because a release has now been tagged in, you can use jsdelivr to get
 and update the SEO plugin (it's fine to use the plugin without the theme, they're just shipped together):
@@ -31,7 +31,7 @@ and update the SEO plugin (it's fine to use the plugin without the theme, they'r
 import seo from "https://cdn.jsdelivr.net/gh/timthepost/cushytext-theme@latest/src/_plugins/seo/mod.ts";
 ```
 
-And a bit later on when all other plugins have loaded:
+And a bit later on when all other plugins that affect rendered HTML have loaded:
 
 ```js
       .use(
@@ -50,12 +50,13 @@ Here's an example of using it for English and Japanese, along with the
 common word set contributed by [Rick Cogley](https://github.com/RickCogley):
 
 ```js
-// below the last plugin import ...
 import seo from "https://cdn.jsdelivr.net/gh/timthepost/cushytext-theme@latest/src/_plugins/seo/mod.ts";
 import { japaneseCommonWords } from "https://cdn.jsdelivr.net/gh/timthepost/cushytext-theme@latest/src/_plugins/seo/japanese_common_words.js";
+```
 
-  // later on, after most other plugins run
+Again, later on, after other plugins that affect rendered HTML are loaded:
 
+```
   .use(
     seo({
       output: "./_seo_report.json",
@@ -80,7 +81,7 @@ import { japaneseCommonWords } from "https://cdn.jsdelivr.net/gh/timthepost/cush
 ```
 
 Notice that here one ignores all but English and uses characters as the count unit, and 
-the other ignores all but Japanese and uses words as the base length. See the docs for 
+the other ignores all but Japanese and uses words as the count unit. See the docs for 
 all of the available options, including how to squelch errors.
 
   [1]: https://infima.dev

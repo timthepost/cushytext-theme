@@ -89,12 +89,12 @@ export const defaults: Options = {
   warnImageAltAttribute: true,
   warnImageTitleAttribute: true,
   thresholdMetaDescriptionLength: 180,
-  thresholdContentMinimum: 3500,
-  thresholdContentMaximum: 20000,
+  thresholdContentMinimum: 3200,
+  thresholdContentMaximum: 50000,
   thresholdLength: 80,
   thresholdLengthPercentage: 0.7,
   thresholdLengthForCWCheck: 35,
-  thresholdCommonWordsPercent: 45,
+  thresholdCommonWordsPercent: 49,
   removeReportFile: false,
   output: null,
   lengthUnit: "character",
@@ -340,7 +340,7 @@ export default function seo(userOptions?: Options) {
                 contentLength >= options.thresholdContentMaximum
               ) {
                 warnings[warningCount++] =
-                  `Content length meets or exceeds ${options.thresholdContentMaximum} ${lengthUnit}(s), can this be split up?`;
+                  `Content length (${contentLength}}) meets or exceeds ${options.thresholdContentMaximum} ${lengthUnit}(s), can this be split up?`;
               }
             }
           }

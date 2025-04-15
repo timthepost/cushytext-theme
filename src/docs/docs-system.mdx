@@ -94,14 +94,18 @@ is set up in `plugins.ts` where the rest of the feeds are created.
 ## Docs Subdirectory Setup 
 
 The title of the `index.mdx` file in any sub directory will be the title
-of the category in the nav. If there's no `index.mdx` file, then the folder
-name is used as the category name.
+of that sub category in the nav. If there's no `index.mdx` file, then the folder
+name is used as the sub category name. 
+
+The name of the main docs nav is controlled in the `_data.yml` file at the top 
+of the instance (in our case, `docs/_data.yml`) in the `docs.title` setting.
 
 To control where a category sits in the overall nav, adjust the `menu.order`
 property of the index file in that directory. To control where files within 
-directories appear in the nav, adjust their individual `menu.order` settings.
+directories appear in the categories, adjust their individual `menu.order` 
+settings.
 
-Default is ascending (`/docs/index.mdx` has a value of -1 to stay on top).
+The default sort order is ascending (`/docs/index.mdx` has a value of -1 to stay on top).
 
 See `docs/folder1/` for a practical example.
 

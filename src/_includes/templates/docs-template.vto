@@ -7,7 +7,7 @@
     </div>
     <nav class="pagination-nav margin-top--lg">
       <div class="pagination-nav__item">
-        {{ set previousPost = search.previousPage(url, `waypoint=${waypoint} menu.visible=true`, "menu.order") }}
+        {{ set previousPost = search.previousPage(url, `waypoint=${waypoint} menu.visible=true`, "menu.order=asc") }}
         {{ if previousPost }}
           <a class="pagination-nav__link" href="{{ previousPost.url }}">
             <div class="pagination-nav__sublabel">{{ locale.documentation.prev_link }}</div>
@@ -16,7 +16,7 @@
         {{ /if }}
       </div>
       <div class="pagination-nav__item pagination-nav__item--next">
-        {{ set nextPost = search.nextPage(url, `waypoint=${waypoint} menu.visible=true`, "menu.order") }}
+        {{ set nextPost = search.nextPage(url, `waypoint=${waypoint} menu.visible=true`, "menu.order=asc") }}
         {{ if nextPost }}
           <a class="pagination-nav__link" href="{{ nextPost.url }}">
             <div class="pagination-nav__sublabel" style="text-align: right">{{ locale.documentation.next_link }}</div>
@@ -67,10 +67,21 @@
             {{# Now loop through the children #}}
             {{ if menuData.children && menuData.children.length > 0 }}
               {{ for item of menuData.children }}
+                {{ if item.children && item.children.length  > 0 }}
+                <!-- add menu__list-item--collapsed to any to control default open / close -->
                 <li class="menu__list-item">
+                 {{ else }}
+                 <li class="menu__list-item">
+                {{ /if }}
                   {{ if item.children && item.children.length > 0 }}
                     {{# This is a category with children #}}
-                    <strong>{{ item.data.title }}</strong>
+                    <div class="menu__list-item-collapsible">
+                      <a class="menu__link" href="{{ item.data.url }}">
+                      {{ item.data.title }}
+                      </a>
+                      <button type="button" class="clean-btn menu__caret">
+                      </button>
+                    </div>
                     <ul class="menu__list">
                       {{ for subItem of item.children }}
                         <li class="menu__list-item">
@@ -96,9 +107,7 @@
       {{ else }}
         <p>No navigation items found. Perhaps put something in the <code>{{ docs.basedir }}</code> directory?</p>
       {{ /if }} {{# End of menuData check #}}
-    {{ /if }} {{# End of docs.sidebar check #}}
-    {{ if docs.sidebar === "auto" }}
-    {{ await comp.feedback({ basename: url }) }}
+      {{ await comp.feedback({ basename: url }) }}
       {{ if docs.guest }}
     <h4 class="margin-vert--md">{{ docs.guest.heading }}</h4>
     <div class="menu thin-scrollbar margin-top--xs">
@@ -112,6 +121,6 @@
       </ul>
       {{ /if }}
     </div>
-    {{ /if }}
+  {{ /if }} {{# docs.sidebar === "auto" #}}
   </div>
 </div>

@@ -1,5 +1,5 @@
 ---
-title: Quick Start Checklist
+title: Quick Start
 url: /quickstart/
 metas:
   description: A quickstart to getting going quickly with Cushy Text.
@@ -9,7 +9,37 @@ metas:
 
 Here's how to get up and running quickly!
 
-## Deno Deploy (Supported)
+## Local Configuration
+
+Make sure you modify the `_config.ts` file and define the `location`
+option, so that things work correctly. Here's what it looks like 
+after being set to `example.com`:
+
+```ts
+
+// after imports 
+
+const site = lume({
+  src: "./src",
+  location: new URL('https://example.com'),
+  server: {
+    middlewares: [
+      router.middleware(),
+      cacheBusting(),
+    ],
+  },
+});
+
+site.use(plugins());
+
+export default site;
+```
+
+You should also check the `_data.yml` files in `docs/`, `blog/` and `pages`, as well
+as the site strings in `src/_data/*.yml`. This includes the tag wiki excerpts, locale 
+strings as well as home page content.
+
+## Deploy On Deno Deploy (Supported)
 
 If you have not yet done so, [sign up for Deno Deploy](https://deno.com/deploy). It's 
 completely free, and currently the only way you can use the included
@@ -44,7 +74,7 @@ On production, there's nothing to configure. Locally, just make sure you load
 your `.env-local` file before running `deno task dev` or `deno task serve` and 
 you'll be fine. 
 
-## Deno VPS (Supported)
+## Deploy On Deno VPS (Supported)
 
 Follow the same instructions as Deno Deploy (above) if you want to use the 
 database. You can use the Deno Deploy URL as a free dev tier if you want.
@@ -71,7 +101,7 @@ in order to enable support for the temporal API and Deno KV (as shown in
 Or, set the repo root as your working directory prior to serving (preferred),
 which automatically loads `deno.json` and turns them on.
 
-## Host With Deno Edge Functions (Possible, But Currently Unsupported)
+## Deploy On Host With Deno Edge Functions (Possible, But Currently Unsupported)
 
 Netlify edge functions are _technically_ capable of running Lume's Router
 middleware, but you'll have to figure out how to move `src/_serve.ts` and

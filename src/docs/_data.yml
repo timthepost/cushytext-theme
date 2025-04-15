@@ -9,6 +9,6 @@ docs:
   title: "Cushy Theme Docs"
   sidebar: auto
   guest:
-    heading: "Latest Blog Post:"
+    heading: "From Your Shiny New Blog:"
     waypoint: "%blog%"
     posts: 1

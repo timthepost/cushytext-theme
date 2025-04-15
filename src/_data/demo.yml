@@ -1,7 +1,7 @@
 # Cushy Text Site Data
 # AKA Demo, since that's what it is to anyone else using it.
 hero:
-  title: Demo Site Name ☁️
+  title: Demo Site Name ☁️ 🔥
   href: /blog/example-post/
   cta: "Look: A Button!"
   slogan: You can find this text in <code class="language-none">src/_data/demo.yml</code>.

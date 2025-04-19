@@ -30,13 +30,13 @@ footer:
   - category: "Theme Basics:"
     links:
       - text: Fundamental Archetypes Explained
-        href: /docs/archetypes/
+        href: https://cushytext.deno.dev/docs/archetypes/
 
       - text: Working With Components
-        href: /docs/components/
+        href: https://cushytext.deno.dev/docs/components/
 
       - text: Lume 3 Router Middleware
-        href: /docs/middleware/
+        href: https://cushytext.deno.dev/docs/middleware/
 
   - category: "Join The Community:"
     links:

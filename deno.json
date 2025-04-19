@@ -1,7 +1,7 @@
 {
   "imports": {
-    "lume/": "https://cdn.jsdelivr.net/gh/lumeland/lume@c9d1404a01a7aa256968683362414cbb56c9b7a7/",
-    "lume/cms/": "https://cdn.jsdelivr.net/gh/lumeland/cms@d50159470f8741692fb9fbbb70bcea13848a6ee4/",
+    "lume/": "https://cdn.jsdelivr.net/gh/lumeland/lume@2f3d7c6b9aa9a1856d7f62cc3ee62ad8a4495a39/",
+    "lume/cms/": "https://cdn.jsdelivr.net/gh/lumeland/cms@2076c5319708e9b99d086ad0b14ef1e7f80972a1/",
     "lume/jsx-runtime": "https://deno.land/x/ssx@v0.1.8/jsx-runtime.ts"
   },
   "tasks": {
@@ -37,7 +37,6 @@
       "./_site"
     ]
   },
-  "nodeModulesDir": "auto",
   "unstable": [
     "kv",
     "temporal"

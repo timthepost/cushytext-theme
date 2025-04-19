@@ -1,10 +1,10 @@
 top_nav:
   - type: "menu"
-    text: Getting Started
+    text: Quick Start
     href: /quickstart/
     title: You've got this!
     links:
-      - text: Run Through The Checklist
+      - text: Configuration & Deployment
         href: /quickstart/
         title: Almost no configuration is needed.
 
@@ -12,11 +12,7 @@ top_nav:
         href: /infima-components/
         title: Neat Things You Can Build Awesome Websites With!
 
-      - text: Read The Docs
-        href: /docs/
-        title: We hold this theme to be ... self .... documenting!
-
-      - text: Read Your Invitation!
+      - text: Come Hang Out!
         href: /blog/example-post/
         title: You are cordially invited to come hang out with us in Discord!
 

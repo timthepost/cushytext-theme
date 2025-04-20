@@ -1,5 +1,5 @@
 export const layout = "layouts/post-archive.vto";
-export const renderOrder = 2;
+export const renderOrder = 1;
 
 /**
  * Borrowed from simple blog, modified a bit.

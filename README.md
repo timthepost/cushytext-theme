@@ -6,16 +6,16 @@ need a little bit of interactivity.
 By default, Cushy Text is:
 
 - A full-featured blog, complete with tag wiki and individual tag feeds,
-- A mini-documentation system with auto-navigation and progress links
-- Search configured out of the box via Pagefind
+- A mini-documentation system with auto-navigation and progress links,
+- A simple low-overhead for MDX landing pages with reusable components,
+- Complete with search configured out of the box with Pagefind,
 - An interactive content-rating system to capture anonymous feedback on your
-  posts
+  posts,
 - Multi-instance capable (more than one blog or documentation instance on the
-  same url)
+  same url),
 - Built with SEO in mind; comes with a comprehensive SEO static analysis plugin
-  (AKA Simple SEO)
-- Turn-key almost no config deploy on Deno Deploy for feedback submission
-  storage
+  (AKA Simple SEO),
+- Turn-key almost no config deploy, especially on Deno Deploy or a Deno VPS.
 
 While it's built to be a _theme_, it delivers a lot of valuable features that
 those working for early-stage technical / technology startups would want. Use it
@@ -39,9 +39,9 @@ A week or two after Lume 3 releases (Mid-May 2025), this will become a proper
 "template" repo you can use to set up a site quickly, and the theme will be
 listed in the Lume Themes Registry for remote / CLI installs.
 
-## Just using the "Simple SEO" plugin:
+## Just using the Simple SEO plugin:
 
-That's cool! You can pull it right from this repo via jsdelivr and it'll be kept
+Just need the SEO plugin? That's cool! You can pull it right from this repo via jsdelivr and it'll be kept
 up-to-date:
 
 ```js

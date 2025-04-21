@@ -6,7 +6,7 @@ menu:
   order: 0
 docs:
   basedir: /docs/
-  title: "Cushy Theme Docs"
+  title: "Your Docs Instance"
   sidebar: auto
   guest:
     heading: "From Your Shiny New Blog:"

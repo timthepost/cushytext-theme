@@ -44,6 +44,8 @@ archive:
   all_posts: "All Posts"
   related_tags: "Related Tags:"
   edit_wiki: "Edit This Tag Wiki On Github (Opens In A New Page)"
+  #un-comment and change the GITHUB_USERNAME and SITE_REPO placeholders
+  #to enable link that encourages community creation and edits of tag wikis.
   #edit_wiki_url: "https://github.com/GITHUB_USERNAME/SITE_REPO/edit/main/src/_data/tagWiki.yml"
   edit_wiki_url: false
   edit_wiki_no_wiki: "This tag has no wiki yet, would you like to create it?"

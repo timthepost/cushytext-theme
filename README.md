@@ -104,6 +104,7 @@ Again, later on, after other plugins that affect rendered HTML are loaded:
 
 Notice that here one ignores all but English and uses characters as the count
 unit, and the other ignores all but Japanese and uses words as the count unit.
-See the docs for all of the available options, including how to squelch errors.
+See the docs for all of the available options, including how to fine-tune
+warnings, logging and report options.
 
 [1]: https://infima.dev

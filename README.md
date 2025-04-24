@@ -61,19 +61,24 @@ And a bit later on when all other plugins that affect rendered HTML have loaded:
 )
 ```
 
+Simple SEO _should_ work okay on Lume 2, as long as the `document` object is present
+in the page data layer. There are some rare instances where it might not be present
+in some Lume 2 generated pages, which might cause an exception to be thrown, as the 
+plugin is written for Lume 3+ where `document` is guaranteed to be present.
+
 [See the full docs for many more configuration options](https://cushytext.deno.dev/docs/theme-plugins/#simple-seo).
 
-Here's an example of using it for English and Japanese, along with the common
-word set contributed by [Rick Cogley](https://github.com/RickCogley):
+Just to show how flexible it is, here's an example of using it for English and Japanese, 
+along with the common word set generously contributed by [Rick Cogley](https://github.com/RickCogley):
 
-```js
+```ts
 import seo from "https://cdn.jsdelivr.net/gh/timthepost/cushytext-theme@latest/src/_plugins/seo/mod.ts";
 import { japaneseCommonWords } from "https://cdn.jsdelivr.net/gh/timthepost/cushytext-theme@latest/src/_plugins/seo/japanese_common_words.js";
 ```
 
 Again, later on, after other plugins that affect rendered HTML are loaded:
 
-```js
+```ts
 .use(
   seo({
     output: "./_seo_report.json",

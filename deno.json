@@ -1,6 +1,6 @@
 {
   "imports": {
-    "lume/": "https://cdn.jsdelivr.net/gh/lumeland/lume@5d6f3c5de023cbdd810abdb8e4c365227ab65641/",
+    "lume/": "https://cdn.jsdelivr.net/gh/lumeland/lume@bd475d62d8993dbc63c607498aa7e425901184cb/",
     "lume/cms/": "https://cdn.jsdelivr.net/gh/lumeland/cms@ba24aa8acb3eefb1cc0ef88c198c468793bcf286/",
     "lume/jsx-runtime": "https://deno.land/x/ssx@v0.1.9/jsx-runtime.ts"
   },
@@ -10,7 +10,7 @@
     "serve": "deno task lume -s",
     "dev": "LUME_DRAFTS=true deno task lume -s",
     "mock": "deno run -A --watch src/_serve.ts",
-    "clean": "rm -rf _site || true; rm -rf _cache || true; rm -f _seo_report.json _broken_links.json || true",
+    "clean": "rm -rf _site || true; rm -rf _cache || true",
     "update-deps": "deno run -A --quiet 'https://deno.land/x/nudd@v0.2.8/cli.ts' update plugins.ts deno.json",
     "cms": "deno task lume cms"
   },
@@ -31,12 +31,15 @@
       ]
     },
     "plugins": [
-      "https://cdn.jsdelivr.net/gh/lumeland/lume@5d6f3c5de023cbdd810abdb8e4c365227ab65641/lint.ts"
+      "https://cdn.jsdelivr.net/gh/lumeland/lume@bd475d62d8993dbc63c607498aa7e425901184cb/lint.ts"
     ]
   },
   "fmt": {
     "exclude": [
       "./_site"
+    ],
+    "plugins": [
+      "https://cdn.jsdelivr.net/gh/lumeland/lume@b32c3acc59051eb89faa3b79c532d638767213ff/lint.ts"
     ]
   },
   "unstable": [

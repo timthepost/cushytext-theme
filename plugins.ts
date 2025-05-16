@@ -25,7 +25,7 @@ import terser from "lume/plugins/terser.ts";
 import transformImages from "lume/plugins/transform_images.ts";
 import mermaid from "https://deno.land/x/lume_mermaid@v0.1.4/mod.ts";
 import minifyHTML from "lume/plugins/minify_html.ts";
-import simpleSEO from "./src/_plugins/seo/mod.ts";
+import simpleSEO from "https://cdn.jsdelivr.net/gh/timthepost/simpleseo@latest/src/_plugins/seo/mod.ts";
 import toc from "./src/_plugins/toc/mod.ts";
 
 import "lume/types.ts";
@@ -153,7 +153,7 @@ export default function(userOptions?: Options) {
           ignorePatterns: ["/archive/", "/author/"],
           stateFile: null,
           reportFile: "./_seo_report.json",
-          debug: true,
+          debug: false,
           defaultLengthUnit: "character",
         },
         lengthChecks: {
@@ -170,6 +170,15 @@ export default function(userOptions?: Options) {
           contentBody: 42,
           minContentLengthForProcessing: "min 1500 character",
           commonWordPercentageCallback: null,
+        },
+          semanticChecks: {
+          headingOrder: true,
+          headingMultipleH1: true,
+          headingMissingH1: true,
+        },
+        mediaAttributeChecks: {
+          imageAlt: "range 2 1500 character",
+          imageTitle: false,
         },
       }))
       .add("_includes/js", "js")

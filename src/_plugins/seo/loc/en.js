@@ -115,7 +115,7 @@ export class enMessages {
     return `${this.APP_NAME}: Run completed with ${totalWarningsAdded} warnings across all categories.`;
   }
   static debugBarMissingMessage() {
-    return `${this.APP_NAME}: Debug bar object is missing; is this Lume 3?`;
+    return `${this.APP_NAME}: No Lume bar to generate.`;
   }
 
   // errors

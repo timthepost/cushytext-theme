@@ -25,7 +25,7 @@ import terser from "lume/plugins/terser.ts";
 import transformImages from "lume/plugins/transform_images.ts";
 import mermaid from "https://deno.land/x/lume_mermaid@v0.1.4/mod.ts";
 import minifyHTML from "lume/plugins/minify_html.ts";
-import seo from "./src/_plugins/seo/mod.ts";
+import simpleSEO from "./src/_plugins/seo/new_mod.ts";
 import toc from "./src/_plugins/toc/mod.ts";
 
 import "lume/types.ts";
@@ -147,14 +147,27 @@ export default function(userOptions?: Options) {
       }))
       .use(minifyHTML({options: { keep_html_and_head_opening_tags: true } }))
       .use(brotli())
-      .use(
-        seo({
-          output: "./_seo_report.json",
-          ignore: ["/cushy-admin/", "/dev/", "/404.html"],
-          lengthUnit: "character",
-          lengthLocale: "en",
-        }),
-      )
+      .use(simpleSEO({
+        globalSettings: {
+          ignore: ["/404.html"],
+          ignorePatterns: ["/archive/", "/author/"],
+          stateFile: null,
+          reportFile: "./_seo_report.json",
+          debug: true,
+          defaultLengthUnit: "character",
+        },
+        lengthChecks: {
+          title: "max 80 character",
+          url: "max 45 character",
+          metaDescription: "range 1 2 sentence",
+          content: "range 900 5000 word",
+          metaKeywordLength: "range 10 50 word",
+        },
+        mediaAttributeChecks: {
+          imageAlt: "range 2 1500 character",
+          imageTitle: false,
+        },
+      }))
       .add("_includes/js", "js")
       .add("_includes/css", "css")
       .add("uploads")

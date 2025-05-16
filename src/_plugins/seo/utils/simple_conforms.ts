@@ -4,7 +4,7 @@
  * Lume 3: https://cushytext.deno.dev
  * License: MIT
  */
-import type { SeoReportMessages } from "../new_mod.ts";
+import type { SeoReportMessages } from "../mod.ts";
 
 /**
  * Defines the units that can be used for length/count requirements.

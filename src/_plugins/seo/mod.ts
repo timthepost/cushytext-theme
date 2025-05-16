@@ -1,192 +1,198 @@
 import type Site from "lume/core/site.ts";
 import { log } from "lume/core/utils/log.ts";
 import { merge } from "lume/core/utils/object.ts";
+import { enMessages } from "./loc/en.js";
+import { enCommonWords } from "./cw/en.js";
+import {
+  type LengthUnit,
+  type RequirementResult,
+  SimpleConforms,
+} from "./utils/simple_conforms.ts";
 
-/* TODO List
- - Pass element that wraps measurable content in config or frontmatter.
-   We currently fall back nicely to just whatever is in the <body>, but
-   many authors wrap their {{ content }} in a div with a class, which
-   would be appropriate here. For instance, this template wraps any
-   meaningfully-long content with  "font-selectable", this could be
-   used to get precise content-length values for any page.
- */
+export type SeoReportMessages = typeof enMessages;
 
-// For internationalization support
-export type LengthUnit = "character" | "grapheme" | "word" | "sentence";
+export interface Options {
+  globalSettings?: {
+    ignore?: string[];
+    ignorePatterns?: string[];
+    stateFile?: string | null;
+    reportFile?: string | ((reportData: Map<string, string[]>) => void) | null;
+    debug?: boolean;
+    defaultLengthUnit?: LengthUnit;
+    removeReportFileIfEmpty?: boolean;
+  };
 
-interface Options {
-  /* Titles should ideally be under 80 characters */
-  warnTitleLength?: boolean;
-  /* long URLs can be problematic */
-  warnUrlLength?: boolean;
-  /* Warn if content is too short / long */
-  warnContentLength?: boolean;
-  /* If metas is installed, warn on description length? */
-  warnMetasDescriptionLength?: boolean;
-  /* If metas is installed, warn on description common words? */
-  warnMetasDescriptionCommonWords?: boolean;
-  /* There should only be one <h1> tag per node */
-  warnDuplicateHeadings?: boolean;
-  /* Warn if heading elements are used out of order? */
-  warnHeadingOrder?: boolean;
-  /* Try to use non-common words in precious URL space! */
-  warnUrlCommonWords?: boolean;
-  /* Try to use non-common words in precious title space! */
-  warnTitleCommonWords?: boolean;
-  /* Meta descriptions can be longer than titles */
-  thresholdMetaDescriptionLength?: number;
-  /* Minimum content length */
-  thresholdContentMinimum?: number;
-  /* Maximum content length */
-  thresholdContentMaximum?: number;
-  /* How long is too long for titles */
-  thresholdLength?: number;
-  /* What % of thresholdLength should be applied to URLs? */
-  thresholdLengthPercentage?: number;
-  /* What % of common words is okay in precious space? */
-  thresholdCommonWordsPercent?: number;
-  /* Min length for common word percentage checks */
-  thresholdLengthForCWCheck?: number;
-  /* Inject your own set of common words */
-  userCommonWordSet?: Set<string>;
-  /* This is also basic accessibility: images need alt="" attribute */
-  warnImageAltAttribute?: boolean;
-  /* Not using titles is a waste of indexable space. */
-  warnImageTitleAttribute?: boolean;
-  /* What source extensions to check? .md(x) by default. */
-  extensions?: string[];
-  /* URL (page.data.url) list to skip processing */
-  ignore?: string[];
-  /* Console, file or function */
-  output?: string | ((seoWarnings: Map<string, Set<string>>) => void) | null;
-  /* Remove output file if run finishes with no warnings? */
-  removeReportFile?: boolean;
-  /* Unit for length checks. See LengthUnit type above */
-  lengthUnit?: LengthUnit;
-  /* Default Locale If It Can't Be Determined By The page */
-  lengthLocale?: string;
-  /* Callback function for common word percentage */
-  commonWordPercentageCallback?: ((title: string) => number) | null;
-  /* Ignore any post not in this locale (useful for daisy chaining) */
-  ignoreAllButLocale?: string | null;
-  /* Log Operations? (there's no level here, either be noisy or be quiet) */
-  /* Note, this is NOT report warnings. This is just development log chatter */
-  logOperations?: boolean;
+  localeSettings?: {
+    defaultLocaleCode?: string;
+    ignoreAllButLocaleCode?: string;
+    commonWordSet?: Set<string>;
+    reporterLocale?: SeoReportMessages;
+  };
+
+  commonWordPercentageChecks?: {
+    title?: number | false;
+    description?: number | false;
+    url?: number | false;
+    contentBody?: number | false;
+    minContentLengthForProcessing?: string;
+    commonWordPercentageCallback?: ((title: string) => number) | null;
+  } | false;
+
+  lengthChecks?: {
+    title?: string | false;
+    url?: string | false;
+    metaDescription?: string | false;
+    content?: string | false;
+    metaKeywordLength?: string | false;
+  } | false;
+
+  semanticChecks?: {
+    headingOrder?: boolean;
+    headingMultipleH1?: boolean;
+    headingMissingH1?: boolean;
+  } | false;
+
+  mediaAttributeChecks?: {
+    imageAlt?: string | false;
+    imageTitle?: string | false;
+  } | false;
+
+  googleSearchConsoleChecks?: {
+    apiEnvVariable?: string;
+    checkIsIndexed?: boolean;
+    checkWarnings?: boolean;
+    checkErrors?: boolean;
+    cacheDaysTTL?: number;
+  } | false;
+
+  bingWebmasterToolsChecks?: {
+    apiEnvVariable?: string;
+    indexNowEnvVariable?: string;
+    apiKeyfileLocation?: string;
+    checkPageStats?: boolean;
+    checkURLStats?: boolean;
+    checkTrafficData?: boolean;
+    checkContentPerformance?: boolean;
+    submitSiteMap?: boolean;
+  } | false;
 }
 
-export const defaults: Options = {
-  extensions: [".html"],
-  ignore: ["/404.html"],
-  warnTitleLength: true,
-  warnUrlLength: true,
-  warnContentLength: true,
-  warnMetasDescriptionLength: true,
-  warnMetasDescriptionCommonWords: true,
-  warnDuplicateHeadings: true,
-  warnHeadingOrder: true,
-  warnTitleCommonWords: true,
-  warnUrlCommonWords: true,
-  warnImageAltAttribute: true,
-  warnImageTitleAttribute: true,
-  thresholdMetaDescriptionLength: 180,
-  thresholdContentMinimum: 3200,
-  thresholdContentMaximum: 50000,
-  thresholdLength: 80,
-  thresholdLengthPercentage: 0.7,
-  thresholdLengthForCWCheck: 35,
-  thresholdCommonWordsPercent: 49,
-  removeReportFile: false,
-  output: null,
-  lengthUnit: "character",
-  lengthLocale: "en",
-  commonWordPercentageCallback: null,
-  ignoreAllButLocale: null,
-  logOperations: false,
+export const defaultOptions: Options = {
+  globalSettings: {
+    ignore: ["/404.html"],
+    ignorePatterns: [],
+    stateFile: null,
+    reportFile: "./_seo_report.json",
+    debug: true,
+    defaultLengthUnit: "character",
+    removeReportFileIfEmpty: true,
+  },
+
+  localeSettings: {
+    defaultLocaleCode: "en",
+    ignoreAllButLocaleCode: undefined,
+    commonWordSet: enCommonWords,
+    reporterLocale: enMessages,
+  },
+
+  commonWordPercentageChecks: {
+    title: 45,
+    description: 55,
+    url: 20,
+    contentBody: 42,
+    minContentLengthForProcessing: "min 1500 character",
+    commonWordPercentageCallback: null,
+  },
+
+  lengthChecks: {
+    title: "max 80 character",
+    url: "max 60 character",
+    metaDescription: "range 1 2 sentence",
+    content: "range 1500 30000 word",
+    metaKeywordLength: "max 10 word",
+  },
+
+  semanticChecks: {
+    headingOrder: true,
+    headingMultipleH1: true,
+    headingMissingH1: true,
+  },
+
+  mediaAttributeChecks: {
+    imageAlt: "range 2 1500 character",
+    imageTitle: false,
+  },
 };
 
-export default function seo(userOptions?: Options) {
-  const options = merge(defaults, userOptions);
-  const lengthUnit = options.lengthUnit;
+interface frontMatterConfig {
+  ignore?: boolean;
+  skipLength?: boolean;
+  skipSemantic?: boolean;
+  skipMedia?: boolean;
+  skipCommonWords?: boolean;
+  skipGoogleSearchConsole?: boolean;
+  skipBingWebmasterTools?: boolean;
+  overrideDefaultLocale?: string;
+  overrideDebug?: boolean;
+  overrideDefaultLengthUnit?: LengthUnit;
+}
 
-  function getLength(
-    text: string,
-    unit: LengthUnit,
-    locale: string,
-  ): number {
-    if (!text) return 0;
-    if (unit === "character") {
-      return text.length;
-    }
+interface PageWarningDetails {
+  messages: Set<string>;
+  sourceFile: string; // Absolute path to the source file for editor links
+}
 
-    const segmenter = new Intl.Segmenter(locale, { granularity: unit });
-    const segments = segmenter.segment(text);
-    let count = 0;
-    for (const _ of segments) {
-      count++;
-    }
-    return count;
+interface SEOWarning {
+  store: Map<string, PageWarningDetails>;
+  check: string;
+  rationale: (checkValue: string) => string;
+  title: string;
+}
+
+interface SEOWarnings {
+  length: SEOWarning;
+  semantic: SEOWarning;
+  commonWord: SEOWarning;
+  mediaAttribute: SEOWarning;
+  googleSearchConsole: SEOWarning;
+  bingWebmasterTools: SEOWarning;
+}
+
+export default function simpleSEO(userOptions?: Options) {
+  const options = merge(defaultOptions, userOptions);
+  const settings = options.globalSettings!;
+  const locale = options.localeSettings.reporterLocale!;
+
+  function checkConformity(
+    inputValue: string | number | null | undefined,
+    nomenclature: string,
+    pageLocale: string,
+    context: string,
+  ): RequirementResult {
+    const checker = new SimpleConforms(nomenclature, pageLocale, locale);
+    return checker.test(inputValue, context);
   }
 
-  /* You can pass a custom dictionary object, if the word segmentation
-   * logic otherwise works for you. If you need different segmentation
-   * to examine "words", you can instead pass your own callback. This
-   * was the best way I could think to be as multi-language-friendly
-   * as possible.
-   */
-  function calculateCommonWordPercentage(text: string): number {
+  function calculateLocalCommonWordPercentage(
+    text: string,
+    commonWords: Set<string>,
+    customCallback?: ((text: string) => number) | null,
+  ): number {
     if (!text) return 0;
     text = text.trim();
-    if (options.commonWordPercentageCallback) {
-      return options.commonWordPercentageCallback(text);
+
+    if (customCallback) {
+      return customCallback(text);
     }
-    const processedText = text.toLowerCase().replace(/[^\w\s]/g, "");
-    const words = processedText.split(/\s+/);
-    // dprint-ignore // deno-fmt-ignore
-    const commonWords = options.userCommonWordSet
-      ? options.userCommonWordSet
-      : new Set([
-        // Not exhaustive! Compiled from dozens of sources,
-        // but not exhaustive. These seem to be the most 
-        // common among all the lists of lists of lists of 
-        // words like this. Also the most common on academic
-        // slides explaining English. Yay, another list!
-        "the", "a", "an", "and", "but",
-        "or", "nor", "for", "so", "yet",
-        "to", "in", "at", "on", "by",
-        "with", "of", "from", "as", "is",
-        "are", "was", "were", "be", "been",
-        "have", "has", "had", "do", "does",
-        "did", "will", "would", "can", "could",
-        "should", "may", "might", "must", "i",
-        "you", "he", "she", "it", "we",
-        "they", "me", "him", "her", "us",
-        "them", "my", "your", "his", "hers",
-        "its", "our", "their", "this", "that",
-        "these", "those", "one", "two", "three",
-        "four", "five", "first", "last", "new",
-        "good", "bad", "man", "woman", "child",
-        "time", "year", "day", "night", "now",
-        "then", "very", "much", "many", "some",
-        "all", "any", "most", "other", "more",
-        "out", "up", "down", "over", "under",
-        "again", "also", "however", "therefore", "because",
-        "since", "while", "before", "after", "if",
-        "unless", "though", "although", "even", "still",
-        "yet", "now", "just", "only", "well",
-        "too", "very", "quite", "rather", "really",
-        "almost", "enough", "about", "above", "across",
-        "after", "against", "along", "among", "around",
-        "at", "before", "behind", "below", "beneath",
-        "beside", "besides", "between", "beyond", "but",
-        "by", "down", "during", "except", "for",
-        "from", "in", "inside", "into", "like",
-        "near", "next", "of", "off", "on",
-        "onto", "out", "outside", "over", "past",
-        "round", "since", "through", "throughout", "to",
-        "toward", "towards", "under", "underneath", "until",
-        "up", "upon", "up to", "with", "within",
-        "without",
-      ]);
+
+    // Normalize: lowercase, remove most punctuation but keep intra-word hyphens/apostrophes.
+    // Replace multiple spaces with a single space.
+    const processedText = text.toLowerCase()
+      .replace(/[^\w\s'-]|(?<!\w)-(?!\w)|(?<!\w)'(?!\w)/g, "")
+      .replace(/\s+/g, " ").trim();
+    const words = processedText.split(" ").filter((word) => word.length > 0);
+
+    if (words.length === 0) return 0;
 
     let commonWordCount = 0;
     for (const word of words) {
@@ -194,408 +200,741 @@ export default function seo(userOptions?: Options) {
         commonWordCount++;
       }
     }
-
-    const percentage = words.length === 0
-      ? 0
-      : (commonWordCount / words.length) * 100;
-
-    return percentage;
+    return (commonWordCount / words.length) * 100;
   }
 
-  const cachedWarnings = new Map<string, Set<string>>();
+  function rationaleLink(check: string): string {
+    return `https://cushytext.deno.dev/docs/theme-plugins/#${check}`;
+  }
 
-  function logEvent(text: string): void {
-    if (options.logOperations) {
-      log.info(text);
+  const warnings: SEOWarnings = {
+    length: {
+      store: new Map<string, PageWarningDetails>(),
+      check: "length-warning",
+      rationale: rationaleLink,
+      title: locale.LENGTH_WARNING_TITLE,
+    },
+
+    semantic: {
+      store: new Map<string, PageWarningDetails>(),
+      check: "semantic-error",
+      rationale: rationaleLink,
+      title: locale.SEMANTIC_WARNING_TITLE,
+    },
+
+    commonWord: {
+      store: new Map<string, PageWarningDetails>(),
+      check: "common-word-warning",
+      rationale: rationaleLink,
+      title: locale.COMMON_WORD_WARNING_TITLE,
+    },
+
+    mediaAttribute: {
+      store: new Map<string, PageWarningDetails>(),
+      check: "media-attribute-warning",
+      rationale: rationaleLink,
+      title: locale.MEDIA_ATTRIBUTE_WARNING_TITLE,
+    },
+
+    googleSearchConsole: {
+      store: new Map<string, PageWarningDetails>(),
+      check: "google-search-console-warning",
+      rationale: rationaleLink,
+      title: locale.GOOGLE_CONSOLE_TITLE,
+    },
+
+    bingWebmasterTools: {
+      store: new Map<string, PageWarningDetails>(),
+      check: "bing-webmaster-tools-warning",
+      rationale: rationaleLink,
+      title: locale.BING_WEBMASTER_TITLE,
+    },
+  };
+
+  function prepareReportData(
+    warningsObject: SEOWarnings,
+  ): Map<string, string[]> {
+    const reportMap = new Map<string, string[]>();
+    for (const categoryKey in warningsObject) {
+      const category = warningsObject[categoryKey as keyof SEOWarnings];
+      for (const [url, pageDetails] of category.store.entries()) {
+        const existingMessages = reportMap.get(url) || [];
+        reportMap.set(url, [...existingMessages, ...pageDetails.messages]);
+      }
     }
+    return reportMap;
   }
 
   return (site: Site) => {
-    const debugBarReport = site.debugBar?.collection("SimpleSEO");
-    if (debugBarReport) {
-      debugBarReport.contexts = {
-        "length-warning": {
-          background: "warning",
-        },
-        "common-word-warning": {
-          background: "warning",
-        },
-        "image-alt-warning": {
-          background: "warning",
-        },
-        "image-title-warning": {
-          background: "warning",
-        },
-        "structure-warning": {
-          background: "error",
-        },
-        "missing-error": {
-          background: "error",
-        },
-      };
-      debugBarReport.icon = "list-magnifying-glass";
-      debugBarReport.items = [];
-    }
-    function reportPush(
-      url: string,
-      text: string,
-      context: string,
-      warnings: string[],
-    ): void {
-      warnings.push(text);
-      if (debugBarReport) {
-        debugBarReport.items.push({
-          title: url,
-          context: context,
-          items: [{
-            title: text,
-            actions: [
-              {
-                text: "About This Warning Type",
-                href: "https://cushytext.deno.dev/docs/theme-plugins/#" +
-                  context,
-              },
-            ],
-          }],
-        });
+    function logEvent(text: string): void {
+      if (settings.debug) {
+        log.info(text);
       }
     }
 
-    // very similar to how Check Urls plugin does this
-    function JSONIfyCachedWarnings(): string {
-      const content = JSON.stringify(
-        Object.fromEntries(
-          Array.from(cachedWarnings.entries())
-            .map(([url, refs]) => [url, Array.from(refs)]),
-        ),
-        null,
-        2,
-      );
-      return content;
+    logEvent(locale.BEGIN_MESSAGE);
+
+    for (const key in warnings) {
+      warnings[key as keyof SEOWarnings].store.clear();
     }
 
-    function writeWarningsToFile(): void {
-      log.warn(
-        `SEO: Warnings were issued; report saved to ${options.output}`,
-      );
-      const content = JSONIfyCachedWarnings();
-      // we only get here if options.output is a string
-      Deno.writeTextFileSync(<string> options.output, content);
-      return;
-    }
-
-    function writeWarningsToConsole(): void {
-      log.warn("SEO: Warnings were issued during this run. Report as follows:");
-      const content = JSONIfyCachedWarnings();
-      console.dir(content);
-      return;
-    }
-
-    function deleteReportFile(): void {
-      if (
-        typeof (options.output) === "string" && options.removeReportFile
-      ) {
-        try {
-          Deno.removeSync(options.output);
-        } catch (_error) {
-          // do nothing
-        }
-      }
-    }
-
-    let warningCount = 0;
-
-    site.process(options.extensions, (pages) => {
-      logEvent("SEO: Running SEO checks ...");
-      cachedWarnings.clear();
+    site.process([".html"], (pages) => {
       for (const page of pages) {
-        /*
-         * Wherever possible, I prefer to get values from page.document,
-         * even though many of them are in page.data.corresponding_value. This
-         * is because I want to test what search engines see, not what's in
-         * YAML :) The only options I get directly from page.data are those
-         * that can't be determined from page.document - url and frontmatter
-         * to control the plugin. Falling back to page.data if it's not in
-         * the document hides unrelated bugs.
-         */
-        const frontMatter = page.data.seo || null;
-        if (page.data.url && options.ignore.includes(page.data.url)) {
-          logEvent(`SEO: Skipping ${page.data.url} per options.`);
+        const pageUrl = page.data.url;
+        const sourceFile = page.src.entry?.src;
+        const frontMatter: frontMatterConfig | undefined = page.data.seo;
+
+        // Page-level debug override
+        const pageDebug = frontMatter?.overrideDebug ?? settings.debug;
+
+        // We can't know this until we're inside, so we must. This is
+        // necessary for per-page level debug.
+        // deno-lint-ignore no-inner-declarations
+        function pageLogEvent(text: string): void {
+          if (pageDebug) {
+            log.info(text);
+          }
+        }
+
+        if (settings.ignore?.includes(pageUrl)) {
+          pageLogEvent(locale.skippingPageConfigIgnore(pageUrl));
           continue;
         }
 
-        if (frontMatter && frontMatter.ignore === true) {
-          logEvent(`SEO: Skipping ${page.data.url} per frontmatter setting.`);
+        let skipPageDueToPattern = false;
+        if (settings.ignorePatterns && settings.ignorePatterns.length > 0) {
+          for (const pattern of settings.ignorePatterns) {
+            if (pageUrl.startsWith(pattern)) {
+              pageLogEvent(locale.skippingPagePatternIgnore(pageUrl, pattern));
+              skipPageDueToPattern = true;
+              break;
+            }
+          }
+        }
+
+        if (skipPageDueToPattern) {
           continue;
         }
 
-        if (options.ignoreAllButLocale) {
-          if (page.data.lang !== options.ignoreAllButLocale) {
-            logEvent(
-              `SEO: Skipping ${page.data.url} per options.ignoreAllButLocale.`,
-            );
-            continue;
-          }
+        if (frontMatter?.ignore) {
+          pageLogEvent(locale.skippingPageWarning(pageUrl));
+          continue;
         }
 
-        const warnings: string[] = [];
+        const pageEffectiveLocale = frontMatter?.overrideDefaultLocale ||
+          page.data.lang ||
+          options.localeSettings.defaultLocaleCode!;
 
-        logEvent(`SEO: Processing ${page.data.url} ...`);
-
-        // This can't be blank, so set a default if we can't find a language.
-        const locale = page.document.documentElement.lang ||
-          options.lengthLocale;
-
-        if (options.warnTitleLength && page.data.title) {
-          const titleLength = getLength(
-            page.document.title,
-            lengthUnit,
-            locale,
+        if (
+          options.localeSettings.ignoreAllButLocaleCode &&
+          pageEffectiveLocale !== options.localeSettings.ignoreAllButLocaleCode
+        ) {
+          pageLogEvent(
+            locale.skippingPageLocaleMismatch(
+              pageUrl,
+              pageEffectiveLocale,
+              options.localeSettings.ignoreAllButLocaleCode,
+            ),
           );
-          if (titleLength >= options.thresholdLength) {
-            reportPush(
-              page.data.url,
-              `Title is over ${options.thresholdLength} ${lengthUnit}(s).`,
-              "length-warning",
-              warnings,
-            );
-          }
+          continue;
         }
 
-        if (options.warnUrlLength) {
-          const urlLength = getLength(
-            page.data.url,
-            lengthUnit,
-            locale,
-          );
-          const maxLength = options.thresholdLength *
-            options.thresholdLengthPercentage;
-          if (urlLength >= maxLength) {
-            reportPush(
-              page.data.url,
-              `URL meets or exceeds ${maxLength} ${lengthUnit}(s), which is ${options.thresholdLengthPercentage} of the title limit.`,
-              "length-warning",
-              warnings,
-            );
-          }
-        }
+        pageLogEvent(locale.PROCESSING_MESSAGE + page.data.url);
 
-        if (options.warnContentLength) {
-          if (frontMatter && frontMatter.skip_content === true) {
-            logEvent(
-              `SEO: Skipping content length check on ${page.data.url} per frontmatter.`,
-            );
+        if (options.semanticChecks) {
+          if (frontMatter?.skipSemantic) {
+            pageLogEvent(locale.skippingSemanticWarnings(pageUrl));
           } else {
-            if (page.document.body) {
-              const contentLength = getLength(
-                page.document.body.textContent as string,
-                lengthUnit,
-                locale,
+            const warningStore = warnings.semantic.store;
+            const pageSpecificWarnings: string[] = [];
+
+            if (options.semanticChecks.headingMissingH1) {
+              const headingOneElements = page.document?.querySelectorAll("h1");
+              if (!headingOneElements || headingOneElements.length === 0) {
+                const message = locale.APP_NAME + ": " +
+                  locale.ERROR_SEMANTIC_MISSING_H1 + " : " + pageUrl;
+                pageLogEvent(message);
+                pageSpecificWarnings.push(locale.ERROR_SEMANTIC_MISSING_H1);
+              }
+            }
+
+            if (options.semanticChecks.headingMultipleH1) {
+              const headingOneElements = page.document?.querySelectorAll("h1");
+              if (headingOneElements && headingOneElements.length > 1) {
+                const message = locale.APP_NAME + ": " +
+                  locale.ERROR_SEMANTIC_MULTIPLE_H1 + " : " + pageUrl;
+                pageLogEvent(message);
+                pageSpecificWarnings.push(locale.ERROR_SEMANTIC_MULTIPLE_H1);
+              }
+            }
+
+            if (options.semanticChecks.headingOrder) {
+              const headings = page.document?.querySelectorAll(
+                "h1, h2, h3, h4, h5, h6",
               );
-              if (contentLength < options.thresholdContentMinimum) {
-                reportPush(
-                  page.data.url,
-                  `Content length (${contentLength}) is less than ${options.thresholdContentMinimum} ${lengthUnit}(s).`,
-                  "length-warning",
-                  warnings,
+              if (headings) {
+                let previousLevel = 0; // Start with 0, assuming H1 is level 1
+                for (const heading of headings) {
+                  const currentLevel = parseInt(heading.tagName.slice(1));
+                  if (currentLevel > previousLevel + 1) {
+                    const message = locale.APP_NAME + ": " +
+                      locale.errorSemanticHeadingOrder(heading.tagName) +
+                      " : " + pageUrl;
+                    pageLogEvent(message);
+                    pageSpecificWarnings.push(
+                      locale.errorSemanticHeadingOrder(heading.tagName),
+                    );
+                  }
+                  previousLevel = currentLevel;
+                }
+              }
+            }
+
+            if (pageSpecificWarnings.length > 0) {
+              let S = warningStore.get(pageUrl);
+              if (!S) {
+                S = {
+                  messages: new Set<string>(),
+                  sourceFile: sourceFile as string,
+                };
+                warningStore.set(pageUrl, S);
+              }
+              pageSpecificWarnings.forEach((msg) => S!.messages.add(msg));
+            }
+          }
+        }
+
+        if (options.mediaAttributeChecks) {
+          if (frontMatter?.skipMedia) {
+            pageLogEvent(locale.skippingMediaAttributeWarnings(pageUrl));
+          } else {
+            const warningStore = warnings.mediaAttribute.store;
+            const pageSpecificWarnings: string[] = [];
+            const mediaChecksOptions = options.mediaAttributeChecks;
+
+            for (const img of page.document.querySelectorAll("img")) {
+              if (mediaChecksOptions.imageAlt) {
+                const altText = img.getAttribute("alt");
+                if (altText === null) {
+                  const message = locale.APP_NAME + ": " +
+                    locale.CONTEXT_IMG_ALT + " : " + pageUrl;
+                  pageLogEvent(message);
+                  pageSpecificWarnings.push(locale.CONTEXT_IMG_ALT);
+                } else {
+                  const result = checkConformity(
+                    altText,
+                    mediaChecksOptions.imageAlt as string,
+                    pageEffectiveLocale,
+                    locale.CONTEXT_IMG_ALT,
+                  );
+                  if (!result.conforms && result.message) {
+                    pageLogEvent(result.message);
+                    pageSpecificWarnings.push(result.message);
+                  }
+                }
+              }
+
+              if (mediaChecksOptions.imageTitle) {
+                const titleText = img.getAttribute("title");
+                if (titleText === null) {
+                  const message = locale.APP_NAME + ": " +
+                    locale.CONTEXT_IMG_TITLE + " : " + pageUrl;
+                  pageLogEvent(message);
+                  pageSpecificWarnings.push(locale.CONTEXT_IMG_TITLE);
+                } else {
+                  const result = checkConformity(
+                    titleText,
+                    mediaChecksOptions.imageTitle as string,
+                    pageEffectiveLocale,
+                    locale.CONTEXT_IMG_TITLE,
+                  );
+                  if (!result.conforms && result.message) {
+                    pageLogEvent(result.message);
+                    pageSpecificWarnings.push(result.message);
+                  }
+                }
+              }
+            }
+
+            if (pageSpecificWarnings.length > 0) {
+              let S = warningStore.get(pageUrl);
+              if (!S) {
+                S = {
+                  messages: new Set<string>(),
+                  sourceFile: sourceFile as string,
+                };
+                warningStore.set(pageUrl, S);
+              }
+              pageSpecificWarnings.forEach((msg) => S!.messages.add(msg));
+            }
+          }
+        }
+
+        if (options.commonWordPercentageChecks) {
+          if (frontMatter?.skipCommonWords) {
+            pageLogEvent(locale.skippingUniquenessWarnings(pageUrl));
+          } else {
+            const warningStore = warnings.commonWord.store;
+            const pageSpecificWarnings: string[] = [];
+            const commonWordChecksOptions = options.commonWordPercentageChecks;
+            const commonWordSet = options.localeSettings.commonWordSet!;
+            const commonWordCallback =
+              commonWordChecksOptions.commonWordPercentageCallback;
+            const MIN_WORDS_FOR_FIELD_CHECK = 3; // Minimum words for title/desc/url checks
+
+            if (typeof commonWordChecksOptions.title === "number") {
+              const titleText = page.document?.title;
+              if (titleText) {
+                const wordCount = titleText.split(/\s+/).filter((w) =>
+                  w
+                ).length;
+                if (wordCount >= MIN_WORDS_FOR_FIELD_CHECK) {
+                  const percentage = calculateLocalCommonWordPercentage(
+                    titleText,
+                    commonWordSet,
+                    commonWordCallback,
+                  );
+                  if (percentage >= commonWordChecksOptions.title) {
+                    const message = locale.errorCommonWordTitleHigh(
+                      percentage,
+                      commonWordChecksOptions.title,
+                    );
+                    pageLogEvent(
+                      locale.APP_NAME + ": " + message + " : " + pageUrl,
+                    );
+                    pageSpecificWarnings.push(message);
+                  }
+                }
+              }
+            }
+
+            if (typeof commonWordChecksOptions.description === "number") {
+              const metaDescriptionElement = page.document?.querySelector(
+                'meta[name="description"]',
+              );
+              const descriptionText = metaDescriptionElement?.getAttribute(
+                "content",
+              );
+              if (descriptionText) {
+                const wordCount = descriptionText.split(/\s+/).filter((w) =>
+                  w
+                ).length;
+                if (wordCount >= MIN_WORDS_FOR_FIELD_CHECK) {
+                  const percentage = calculateLocalCommonWordPercentage(
+                    descriptionText,
+                    commonWordSet,
+                    commonWordCallback,
+                  );
+                  if (percentage >= commonWordChecksOptions.description) {
+                    const message = locale.errorCommonWordDescriptionHigh(
+                      percentage,
+                      commonWordChecksOptions.description,
+                    );
+                    pageLogEvent(
+                      locale.APP_NAME + ": " + message + " : " + pageUrl,
+                    );
+                    pageSpecificWarnings.push(message);
+                  }
+                }
+              }
+            }
+
+            if (typeof commonWordChecksOptions.url === "number") {
+              const urlText = page.data.url; // URLs are typically paths like /foo/bar-baz/
+              if (urlText) {
+                // For URLs, treat segments separated by / or - as potential words
+                const urlWordsText = urlText.replace(/[\/\-_]+/g, " ").trim();
+                const wordCount = urlWordsText.split(/\s+/).filter((w) =>
+                  w
+                ).length;
+                if (wordCount >= MIN_WORDS_FOR_FIELD_CHECK) { // Apply min words check to the "wordified" URL
+                  const percentage = calculateLocalCommonWordPercentage(
+                    urlWordsText,
+                    commonWordSet,
+                    commonWordCallback,
+                  );
+                  if (percentage >= commonWordChecksOptions.url) {
+                    const message = locale.errorCommonWordUrlHigh(
+                      percentage,
+                      commonWordChecksOptions.url,
+                    );
+                    pageLogEvent(
+                      locale.APP_NAME + ": " + message + " : " + pageUrl,
+                    );
+                    pageSpecificWarnings.push(message);
+                  }
+                }
+              }
+            }
+
+            if (
+              typeof commonWordChecksOptions.contentBody === "number" &&
+              commonWordChecksOptions.minContentLengthForProcessing
+            ) {
+              const bodyText = page.document?.body?.innerText;
+              if (bodyText) {
+                const lengthCheckResult = checkConformity(
+                  bodyText,
+                  commonWordChecksOptions.minContentLengthForProcessing,
+                  pageEffectiveLocale,
+                  locale.CONTEXT_UNIQUENESS_CONTENT_BODY,
                 );
-              } else if (
-                contentLength >= options.thresholdContentMaximum
-              ) {
-                reportPush(
-                  page.data.url,
-                  `Content length (${contentLength}}) meets or exceeds ${options.thresholdContentMaximum} ${lengthUnit}(s).`,
-                  "length-warning",
-                  warnings,
+
+                if (lengthCheckResult.conforms) {
+                  const percentage = calculateLocalCommonWordPercentage(
+                    bodyText,
+                    commonWordSet,
+                    commonWordCallback,
+                  );
+                  if (percentage >= commonWordChecksOptions.contentBody) {
+                    const message = locale.errorCommonWordContentBodyHigh(
+                      percentage,
+                      commonWordChecksOptions.contentBody,
+                    );
+                    pageLogEvent(
+                      locale.APP_NAME + ": " + message + " : " + pageUrl,
+                    );
+                    pageSpecificWarnings.push(message);
+                  }
+                } else {
+                  pageLogEvent(
+                    locale.skippingContentUniquenessWarnings(
+                      pageUrl,
+                      lengthCheckResult.message,
+                    ),
+                  );
+                }
+              }
+            }
+
+            if (pageSpecificWarnings.length > 0) {
+              let S = warningStore.get(pageUrl);
+              if (!S) {
+                S = {
+                  messages: new Set<string>(),
+                  sourceFile: sourceFile as string,
+                };
+                warningStore.set(pageUrl, S);
+              }
+              pageSpecificWarnings.forEach((msg) => S!.messages.add(msg));
+            }
+          }
+        }
+
+        if (options.lengthChecks) {
+          if (frontMatter?.skipLength) {
+            pageLogEvent(locale.skippingLengthWarnings(pageUrl));
+          } else {
+            const warningStore = warnings.length.store;
+            const pageSpecificLengthWarnings: string[] = [];
+
+            if (options.lengthChecks.title) {
+              if (page.document.title) {
+                const result = checkConformity(
+                  page.document.title,
+                  options.lengthChecks.title as string,
+                  pageEffectiveLocale,
+                  locale.CONTEXT_TITLE,
+                );
+                if (!result.conforms && result.message) {
+                  pageLogEvent(result.message);
+                  pageSpecificLengthWarnings.push(result.message);
+                }
+              } else {
+                pageLogEvent(
+                  locale.APP_NAME + ": " + locale.ERROR_TITLE_MISSING + " : " +
+                    pageUrl,
+                );
+                pageSpecificLengthWarnings.push(locale.ERROR_TITLE_MISSING);
+              }
+            }
+
+            if (options.lengthChecks.url) {
+              const result = checkConformity(
+                page.data.url,
+                options.lengthChecks.url as string,
+                pageEffectiveLocale,
+                locale.CONTEXT_URL,
+              );
+              if (!result.conforms && result.message) {
+                pageLogEvent(result.message);
+                pageSpecificLengthWarnings.push(result.message);
+              }
+            }
+
+            if (options.lengthChecks.metaDescription) {
+              const metaDescriptionElement = page.document.querySelector(
+                'meta[name="description"]',
+              );
+              const metaDescription = metaDescriptionElement?.getAttribute(
+                "content",
+              );
+              if (metaDescription !== null && metaDescription !== undefined) {
+                const result = checkConformity(
+                  metaDescription,
+                  options.lengthChecks.metaDescription as string,
+                  pageEffectiveLocale,
+                  locale.CONTEXT_META_DESCRIPTION_LEN,
+                );
+                if (!result.conforms && result.message) {
+                  pageLogEvent(result.message);
+                  pageSpecificLengthWarnings.push(result.message);
+                }
+              } else {
+                pageLogEvent(
+                  locale.APP_NAME + ": " +
+                    locale.ERROR_META_DESCRIPTION_MISSING + " : " + pageUrl,
+                );
+                pageSpecificLengthWarnings.push(
+                  locale.ERROR_META_DESCRIPTION_MISSING,
                 );
               }
             }
-          }
-        }
 
-        if (options.warnDuplicateHeadings) {
-          const headingOneCount = page.document.querySelectorAll("h1").length;
-          if (headingOneCount && headingOneCount > 1) {
-            reportPush(
-              page.data.url,
-              "SEO: More than one <h1> element",
-              "structure-warning",
-              warnings,
-            );
-          }
-        }
-
-        if (options.warnHeadingOrder) {
-          const headings = page.document.querySelectorAll(
-            "h1, h2, h3, h4, h5, h6",
-          );
-          let previousLevel = 0;
-          for (const heading of headings) {
-            // h1 becomes 1, h2 becomes 2, etc.
-            const currentLevel = parseInt(heading.tagName.slice(1));
-            if (currentLevel > previousLevel + 1) {
-              reportPush(
-                page.data.url,
-                `Heading elements out of order: ${heading.tagName} - Headings should be in semantic order.`,
-                "structure-warning",
-                warnings,
-              );
+            if (options.lengthChecks.content) {
+              if (page.document.body) {
+                const result = checkConformity(
+                  page.document.body.innerText,
+                  options.lengthChecks.content as string,
+                  pageEffectiveLocale,
+                  locale.CONTEXT_MAIN_CONTENT_LEN,
+                );
+                if (!result.conforms && result.message) {
+                  pageLogEvent(
+                    locale.APP_NAME + ": " + result.message + " : " + pageUrl,
+                  );
+                  pageSpecificLengthWarnings.push(result.message);
+                }
+              }
             }
-            previousLevel = currentLevel;
-          }
-        }
 
-        if (
-          (options.warnImageAltAttribute || options.warnImageTitleAttribute)
-        ) {
-          for (const img of page.document.querySelectorAll("img")) {
-            if (
-              img && options.warnImageAltAttribute && !img.hasAttribute("alt")
-            ) {
-              reportPush(
-                page.data.url,
-                "Image is missing alt attribute. This also breaks accessibility!",
-                "image-alt-warning",
-                warnings,
+            if (options.lengthChecks.metaKeywordLength) {
+              const metaKeywords = page.document.querySelectorAll(
+                'meta[name="keywords"]',
               );
-            }
-            if (
-              img && options.warnImageTitleAttribute &&
-              !img.hasAttribute("title")
-            ) {
-              reportPush(
-                page.data.url,
-                "Image is missing title attribute. Suggest using image title attributes strategically.",
-                "image-title-warning",
-                warnings,
-              );
-            }
-          }
-        }
-
-        if (
-          options.warnTitleCommonWords && page.document.title &&
-          page.document.title.length >= options.thresholdLengthForCWCheck
-        ) {
-          const titleCommonWords = calculateCommonWordPercentage(
-            page.document.title,
-          );
-          if (titleCommonWords >= options.thresholdCommonWordsPercent) {
-            reportPush(
-              page.data.url,
-              `Title has a large percentage (${titleCommonWords}) of common words; consider revising.`,
-              "common-word-warning",
-              warnings,
-            );
-          }
-        }
-
-        if (
-          options.warnUrlCommonWords && page.data.url &&
-          page.data.url.length >= options.thresholdLengthForCWCheck
-        ) {
-          const urlCommonWords = calculateCommonWordPercentage(page.data.url);
-          if (urlCommonWords >= options.thresholdCommonWordsPercent) {
-            reportPush(
-              page.data.url,
-              `URL has a large percentage (${urlCommonWords}) of common words; consider revising.`,
-              "common-word-warning",
-              warnings,
-            );
-          }
-        }
-
-        const metaDescriptionElement = page.document.querySelector(
-          'meta[name="description"]',
-        );
-
-        if (!metaDescriptionElement) {
-          if (
-            options.warnMetasDescriptionLength ||
-            options.warnMetasDescriptionCommonWords
-          ) {
-            reportPush(
-              page.data.url,
-              `Could not determine meta description; checks using it may not run, or may fail.`,
-              "missing-error",
-              warnings,
-            );
-          }
-        }
-
-        if (options.warnMetasDescriptionLength && metaDescriptionElement) {
-          if (frontMatter && frontMatter.skip_metas === true) {
-            logEvent(
-              `SEO: Skipping meta description length check on ${page.data.url} per frontmatter.`,
-            );
-          } else {
-            const metaDescription =
-              metaDescriptionElement.getAttribute("content") || null;
-            if (metaDescription) {
-              const metaDescriptionLength = getLength(
-                metaDescription,
-                lengthUnit,
-                locale,
-              );
-              if (
-                metaDescriptionLength >=
-                  options.thresholdMetaDescriptionLength
-              ) {
-                reportPush(
-                  page.data.url,
-                  `Meta description length meets or exceeds ${options.thresholdMetaDescriptionLength} ${lengthUnit}(s).`,
-                  "length-warning",
-                  warnings,
+              if (metaKeywords && metaKeywords.length > 0) {
+                let combinedKeywordsContent = "";
+                for (const keyword of metaKeywords) {
+                  if (keyword.getAttribute("content")) {
+                    combinedKeywordsContent += keyword.getAttribute("content") +
+                      " ";
+                  }
+                }
+                combinedKeywordsContent = combinedKeywordsContent.trim();
+                if (combinedKeywordsContent.length > 0) {
+                  const result = checkConformity(
+                    combinedKeywordsContent,
+                    options.lengthChecks.metaKeywordLength as string,
+                    pageEffectiveLocale,
+                    locale.CONTEXT_META_KEYWORD_LEN,
+                  );
+                  if (!result.conforms && result.message) {
+                    pageLogEvent(result.message);
+                    pageSpecificLengthWarnings.push(result.message);
+                  }
+                }
+              } else {
+                pageLogEvent(
+                  locale.APP_NAME + ": " + locale.ERROR_META_KEYWORD_MISSING +
+                    " : " + pageUrl,
+                );
+                pageSpecificLengthWarnings.push(
+                  locale.ERROR_META_KEYWORD_MISSING,
                 );
               }
             }
-          }
-        }
 
-        if (options.warnMetasDescriptionCommonWords && metaDescriptionElement) {
-          if (frontMatter && frontMatter.skip_metas === true) {
-            logEvent(
-              `SEO: Skipping meta description common word count on ${page.data.url} per frontmatter.`,
-            );
-          } else {
-            const metaDescription =
-              metaDescriptionElement?.getAttribute("content") || null;
-            const descriptionPercentage = calculateCommonWordPercentage(
-              metaDescription as string,
-            );
-            if (
-              metaDescription &&
-              descriptionPercentage >=
-                options.thresholdCommonWordsPercent
-            ) {
-              reportPush(
-                page.data.url,
-                `Meta description common word percentage (${descriptionPercentage}) meets or exceeds ${options.thresholdCommonWordsPercent}.`,
-                "common-word-warning",
-                warnings,
-              );
+            if (pageSpecificLengthWarnings.length > 0) {
+              let S = warningStore.get(pageUrl);
+              if (!S) {
+                S = {
+                  messages: new Set<string>(),
+                  sourceFile: sourceFile as string,
+                };
+                warningStore.set(pageUrl, S);
+              }
+              pageSpecificLengthWarnings.forEach((msg) => S!.messages.add(msg));
             }
           }
         }
 
-        if (warningCount) {
-          cachedWarnings.set(page.data.url, new Set(warnings));
-          warningCount = 0;
+        if (options.googleSearchConsoleChecks) {
+          if (frontMatter?.skipGoogleSearchConsole) {
+            pageLogEvent(locale.skippingGoogleConsoleWarnings(pageUrl));
+          } else {
+            const warningStore = warnings.googleSearchConsole.store;
+            const pageSpecificWarnings: string[] = [];
+
+            /**
+             * Coming in 2.0.1:
+             *  - Keep track of pages being indexed and de-indexed by Google
+             *  - Fetch warnings from Google Search Console
+             *  - Fetch performance data from Google Search Console
+             *  - Manual & Automatic re-submission for crawl and indexing on content
+             *    or indexing change
+             *  - Automatic initial sitemap submission
+             *  - ... file a GH issue to ask for more
+             */
+
+            if (pageSpecificWarnings.length > 0) {
+              let S = warningStore.get(pageUrl);
+              if (!S) {
+                S = {
+                  messages: new Set<string>(),
+                  sourceFile: sourceFile as string,
+                };
+                warningStore.set(pageUrl, S);
+              }
+              pageSpecificWarnings.forEach((msg) => S!.messages.add(msg));
+            }
+          }
+        }
+
+        if (options.bingWebmasterToolsChecks) {
+          if (frontMatter?.skipBingWebmasterTools) {
+            pageLogEvent(locale.skippingBingWebmasterWarnings(pageUrl));
+          } else {
+            const warningStore = warnings.bingWebmasterTools.store;
+            const pageSpecificWarnings: string[] = [];
+
+            /**
+             * Coming in 2.0.1:
+             *  - Keep track of pages being indexed and de-indexed by Bing & Yahoo
+             *  - Fetch warnings and issues
+             *  - Automatically update Bing & Yahoo to come re-crawl when content changes
+             *  - Fetch performance data
+             *  - Automatic initial submission
+             *   ... file a GH issue to ask for more
+             */
+
+            if (pageSpecificWarnings.length > 0) {
+              let S = warningStore.get(pageUrl);
+              if (!S) {
+                S = {
+                  messages: new Set<string>(),
+                  sourceFile: sourceFile as string,
+                };
+                warningStore.set(pageUrl, S);
+              }
+              pageSpecificWarnings.forEach((msg) => S!.messages.add(msg));
+            }
+          }
         }
       }
+    });
 
-      // Do we have anything to report?
-      if (cachedWarnings.size) {
-        if (typeof options.output === "function") {
-          options.output(cachedWarnings);
-        } else if (typeof options.output === "string") {
-          writeWarningsToFile();
-        } else {
-          writeWarningsToConsole();
+    site.addEventListener("afterBuild", () => {
+      const debugBarReport = site.debugBar?.collection(locale.APP_NAME);
+      if (debugBarReport) {
+        logEvent(locale.populatingDebugBar(locale.APP_NAME));
+        debugBarReport.contexts = {};
+        for (const key in warnings) {
+          const categoryInfo = warnings[key as keyof SEOWarnings];
+          // just determine background color dynamically
+          const background = categoryInfo.check.includes("semantic")
+            ? "error"
+            : "warning";
+          debugBarReport.contexts[categoryInfo.check] = { background };
         }
+
+        if (!debugBarReport.contexts["missing-error"]) {
+          debugBarReport.contexts["missing-error"] = { background: "error" };
+        }
+
+        debugBarReport.icon = "list-magnifying-glass";
+        debugBarReport.items = [];
+
+        let totalWarningsAdded = 0;
+        for (const categoryKey in warnings) {
+          const categoryInfo = warnings[categoryKey as keyof SEOWarnings];
+          const contextString = categoryInfo.check;
+          const warningStore = categoryInfo.store;
+
+          if (warningStore.size > 0) {
+            logEvent(
+              locale.foundWarningsForCategory(warningStore.size, categoryKey),
+            );
+          }
+
+          const rationaleUrl = categoryInfo.rationale(categoryInfo.check);
+
+          for (const [pageUrlString, pageWarningDetails] of warningStore) {
+            const subItems = [];
+            for (const message of pageWarningDetails.messages) {
+              subItems.push({
+                title: message,
+                actions: [
+                  {
+                    text: locale.ACTIONS_ABOUT_WARNING_TYPE,
+                    href: rationaleUrl,
+                    icon: "question",
+                  },
+                  {
+                    text: locale.ACTIONS_VISIT_PAGE,
+                    href: pageUrlString,
+                    icon: "globe",
+                  },
+                  {
+                    text: locale.ACTIONS_OPEN_IN_VSCODE_EDITOR,
+                    href: `vscode://file/${pageWarningDetails.sourceFile}`,
+                    icon: "code",
+                  },
+                ],
+              });
+              totalWarningsAdded++;
+            }
+            if (subItems.length > 0) {
+              debugBarReport.items.push({
+                title: `${categoryInfo.title} for: ${pageUrlString}`,
+                context: contextString,
+                items: subItems,
+              });
+            }
+          }
+        }
+        logEvent(locale.debugBarCompletionMessage(totalWarningsAdded));
+        // We don't register on the build tab, as our own tab is evidence that we made it.
       } else {
-        deleteReportFile();
-        logEvent("SEO: No warnings to report! Good job! 🎉");
+        logEvent(locale.debugBarMissingMessage());
+      }
+
+      // Generate report file or call callback
+      const finalReportData = prepareReportData(warnings);
+      let totalWarningCount = 0;
+      finalReportData.forEach((messages) =>
+        totalWarningCount += messages.length
+      );
+
+      if (typeof settings.reportFile === "function") {
+        settings.reportFile(finalReportData);
+        logEvent(locale.reportDataPassedToCallback(totalWarningCount));
+      } else if (typeof settings.reportFile === "string") {
+        if (totalWarningCount > 0) {
+          try {
+            const reportJson = JSON.stringify(
+              Object.fromEntries(finalReportData.entries()),
+              null,
+              2,
+            );
+            Deno.writeTextFileSync(settings.reportFile, reportJson);
+            logEvent(locale.reportFileGenerated(settings.reportFile));
+          } catch (e) {
+            if (e instanceof Error) {
+              log.error(locale.reportFileError(e.message));
+            } else {
+              log.error(locale.reportFileError(String(e)));
+            }
+          }
+        } else {
+          if (settings.removeReportFileIfEmpty) {
+            try {
+              Deno.removeSync(settings.reportFile);
+              logEvent(locale.reportFileRemoved(settings.reportFile));
+            } catch (_e) {
+              // do nothing - reports are often untracked and do not exist by default.
+            }
+          }
+        }
       }
     });
   };

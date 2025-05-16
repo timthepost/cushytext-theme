@@ -25,7 +25,7 @@ import terser from "lume/plugins/terser.ts";
 import transformImages from "lume/plugins/transform_images.ts";
 import mermaid from "https://deno.land/x/lume_mermaid@v0.1.4/mod.ts";
 import minifyHTML from "lume/plugins/minify_html.ts";
-import simpleSEO from "./src/_plugins/seo/new_mod.ts";
+import simpleSEO from "./src/_plugins/seo/mod.ts";
 import toc from "./src/_plugins/toc/mod.ts";
 
 import "lume/types.ts";
@@ -163,9 +163,13 @@ export default function(userOptions?: Options) {
           content: "range 900 5000 word",
           metaKeywordLength: "range 10 50 word",
         },
-        mediaAttributeChecks: {
-          imageAlt: "range 2 1500 character",
-          imageTitle: false,
+        commonWordPercentageChecks: {
+          title: 45,
+          description: 55,
+          url: 20,
+          contentBody: 42,
+          minContentLengthForProcessing: "min 1500 character",
+          commonWordPercentageCallback: null,
         },
       }))
       .add("_includes/js", "js")
